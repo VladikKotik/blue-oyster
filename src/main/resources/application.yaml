@@ -1,3 +1,13 @@
 spring:
   application:
     name: oyster
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:5433/lms
+    username: ${DB_USER}
+    password: ${DB_PSWD}
+    driver-class-name: org.postgresql.Driver
+
+server:
+  port: 8081
