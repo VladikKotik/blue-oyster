@@ -26,8 +26,6 @@ public class GuestsManagementService {
         this.inviteRepository = inviteRepository;
     }
 
-    //todo мож на все транзакшонал навешать?
-
     public void addGuest(String firstName, String lastName) {
         GuestEntity newGuest = new GuestEntity();
         newGuest.setFirstName(firstName);
@@ -43,13 +41,7 @@ public class GuestsManagementService {
     public void banGuest(String firstName, String lastName) {
         GuestEntity guest = findGuestByName(firstName, lastName);
         guestRepository.delete(guest);
-
-        try {
-            InviteEntity lastInvite = inviteRepository.findByGuest_IdAndUsedAtIsNull(guest.getId()).orElseThrow(() -> new InvalidQrCodeException(""));
-            inviteRepository.delete(lastInvite);
-        } catch (InvalidQrCodeException ignored) {
-        }
-        //хотя наверное лучше cascade delete проставить было в таблице с qr, зачем нам история, если мы удаляем пользователя совсем
+        // инвайты удаляем каскадно
     }
 
     @Transactional
@@ -104,15 +96,17 @@ public class GuestsManagementService {
         return invitation.getQr();
     }
 
-    //qr код нельзя вертать по тз, и в след раз гость его будет брать из базы(из телефона)
+    //qr код нельзя вертать по тз, и в след раз гость его будет брать из базы
     private void inviteGuestForNextTime(GuestEntity guest) {
         createInvitationHelper(guest);
     }
 
     private InviteEntity createInvitationHelper(GuestEntity guest) {
+        inviteRepository.findAllByGuest_IdAndUsedAtIsNull(guest.getId()).forEach(InviteEntity::markAsUsed);
+        inviteRepository.flush();
+
         InviteEntity invitation = new InviteEntity();
         invitation.setGuest(guest);
-        inviteRepository.findAllByGuest_IdAndUsedAtIsNull(guest.getId()).forEach(InviteEntity::markAsUsed);
         inviteRepository.save(invitation);
         return invitation;
     }
