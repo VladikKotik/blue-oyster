@@ -1,6 +1,5 @@
 package com.blue.oyster.service;
 
-import com.blue.oyster.model.GuestChangeDTO;
 import com.blue.oyster.model.GuestDTO;
 import com.blue.oyster.model.GuestEntity;
 import com.blue.oyster.model.InviteEntity;
@@ -12,6 +11,7 @@ import com.blue.oyster.repository.InviteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,72 +26,86 @@ public class GuestsManagementService {
         this.inviteRepository = inviteRepository;
     }
 
-    public void addGuest(String firstName, String lastName) {
+    public void addGuest(GuestDTO guest) {
         GuestEntity newGuest = new GuestEntity();
-        newGuest.setFirstName(firstName);
-        newGuest.setLastName(lastName);
+        newGuest.setFirstName(guest.firstName());
+        newGuest.setLastName(guest.lastName());
+        newGuest.setCreatedAt(Instant.now());
         guestRepository.save(newGuest);
     }
 
-    private GuestEntity findGuestByName(String firstName, String lastName) {
-        return guestRepository.findByFirstNameAndLastName(firstName, lastName).orElseThrow(() -> new GuestNotFoundException("Гость не найден: " + firstName + " " + lastName));
-    }
 
-
-    public void banGuest(String firstName, String lastName) {
-        GuestEntity guest = findGuestByName(firstName, lastName);
+    public void deleteGuest(UUID guestId) {
+        GuestEntity guest = findGuestById(guestId);
         guestRepository.delete(guest);
         // инвайты удаляем каскадно
     }
 
     @Transactional
-    public void changeGuestName(GuestChangeDTO guestChange) {
-        GuestEntity guest = findGuestByName(guestChange.oldFirstName(), guestChange.oldLastName());
-        guest.setFirstName(guestChange.newFirstName());
-        guest.setLastName(guestChange.newLastName());
+    public void changeGuestName(UUID id, GuestDTO guestChange) {
+        GuestEntity guest = findGuestById(id);
+        guest.setFirstName(guestChange.firstName());
+        guest.setLastName(guestChange.lastName());
+        guest.setUpdatedAt(Instant.now());
     }
 
     @Transactional
     public GuestDTO entryTheClub(UUID qrCodeInvitation) {
-        InviteEntity invitation = inviteRepository.findById(qrCodeInvitation).orElseThrow(() -> new InvalidQrCodeException("сегодня вас тут не ждут!!!"));
-        if (!invitation.isActive()) throw new InvalidQrCodeException("сегодня вас тут не ждут!!!, qr code протух");
+        InviteEntity invitation = inviteRepository.findByQr(qrCodeInvitation)
+                .orElseThrow(() -> new InvalidQrCodeException("данный qr code не найден"));
+        if (!invitation.isActive()) {
+            throw new InvalidQrCodeException("qr code не действителен, он уже был использован");
+        }
         GuestEntity guest = invitation.getGuest();
         invitation.markAsUsed();
+        invitation.setUpdatedAt(Instant.now());
         inviteGuestForNextTime(guest);
         return new GuestDTO(guest.getFirstName(), guest.getLastName());
     }
 
-    public List<GuestDTO> getAllGuests() {
-        return guestRepository.findAll().stream().map(g -> new GuestDTO(g.getFirstName(), g.getLastName())).toList();
+    public List<GuestDTO> findGuests(UUID id) {
+        if (id == null) return findAllGuests();
+        else return List.of(GuestDTO.entitryToDto(findGuestById(id)));
     }
 
-    public GuestDTO getGuestByName(String firstName, String lastName) {
-        GuestEntity guest = findGuestByName(firstName, lastName);
-        return new GuestDTO(guest.getFirstName(), guest.getLastName());
+    private List<GuestDTO> findAllGuests() {
+        return guestRepository.findAll().stream().map(GuestDTO::entitryToDto).toList();
     }
 
-    public void deleteInvitation(UUID qrCodeInvitation) {
-        InviteEntity invitation = inviteRepository.findById(qrCodeInvitation).orElseThrow(() -> new InvalidQrCodeException("invitation not found"));
+    private GuestEntity findGuestById(UUID id) {
+        return guestRepository.findById(id)
+                .orElseThrow(() -> new GuestNotFoundException("Гость не найден: " + id));
+    }
+
+
+    public void deleteInvitation(UUID id) {
+        InviteEntity invitation = findInvitationById(id);
         if (invitation.isActive()) inviteRepository.delete(invitation);
         else throw new ClearingHistoryException("нельзя изменять историю посещений!");
     }
 
 
     @Transactional
-    public void moveInvitationToOtherGuest(UUID qrCodeInvitation, String firstName, String lastName) {
-        InviteEntity invitation = inviteRepository.findById(qrCodeInvitation).orElseThrow(() -> new InvalidQrCodeException("invitation not found"));
+    public void moveInvitationToOtherGuest(UUID invitationId, UUID guestId) {
+        InviteEntity invitation = findInvitationById(invitationId);
         if (!invitation.isActive()) {
             throw new ClearingHistoryException("нельзя изменять историю посещений!");
         } else {
-            GuestEntity guest = findGuestByName(firstName, lastName);
+            GuestEntity guest = findGuestById(guestId);
             invitation.setGuest(guest);
+            invitation.setUpdatedAt(Instant.now());
             inviteRepository.save(invitation);
         }
     }
 
+    public InviteEntity findInvitationById(UUID id) {
+        return inviteRepository.findById(id)
+                .orElseThrow(() -> new InvalidQrCodeException("invitation not found"));
+    }
+
     @Transactional
-    public UUID inviteGuest(String firstName, String lastName) {
-        GuestEntity guest = findGuestByName(firstName, lastName);
+    public UUID inviteGuest(UUID guestId) {
+        GuestEntity guest = findGuestById(guestId);
         InviteEntity invitation = createInvitationHelper(guest);
         return invitation.getQr();
     }
@@ -103,13 +117,12 @@ public class GuestsManagementService {
 
     private InviteEntity createInvitationHelper(GuestEntity guest) {
         inviteRepository.findAllByGuest_IdAndUsedAtIsNull(guest.getId()).forEach(InviteEntity::markAsUsed);
-        inviteRepository.flush();
-
         InviteEntity invitation = new InviteEntity();
+        invitation.setQr(UUID.randomUUID());
         invitation.setGuest(guest);
+        invitation.setCreatedAt(Instant.now());
         inviteRepository.save(invitation);
         return invitation;
     }
-
 
 }

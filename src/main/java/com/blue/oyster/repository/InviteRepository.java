@@ -10,10 +10,9 @@ import java.util.UUID;
 
 @Repository
 public interface InviteRepository extends JpaRepository<InviteEntity, UUID> {
-    Optional<InviteEntity> findByGuest_IdAndUsedAtIsNull(UUID guestId);
-
-    List<InviteEntity> findAllByGuest_IdOrderByUsedAtDesc(UUID guestId);
+    Optional<InviteEntity> findByQr(UUID qr);
 
     List<InviteEntity> findAllByGuest_IdAndUsedAtIsNull(UUID guestId);
+
 
 }

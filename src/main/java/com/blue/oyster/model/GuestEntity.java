@@ -2,6 +2,7 @@ package com.blue.oyster.model;
 
 import jakarta.persistence.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +24,11 @@ public class GuestEntity {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @OneToMany(mappedBy = "guest", fetch = FetchType.LAZY)
     private List<InviteEntity> invitations;
@@ -46,4 +52,13 @@ public class GuestEntity {
     public void setFirstName(String firstName) {
         this.firstName = firstName;
     }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }
