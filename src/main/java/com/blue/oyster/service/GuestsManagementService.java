@@ -1,13 +1,13 @@
 package com.blue.oyster.service;
 
-import com.blue.oyster.model.GuestDTO;
-import com.blue.oyster.model.GuestEntity;
-import com.blue.oyster.model.InviteEntity;
+import com.blue.oyster.model.*;
 import com.blue.oyster.model.exceptions.ClearingHistoryException;
 import com.blue.oyster.model.exceptions.GuestNotFoundException;
 import com.blue.oyster.model.exceptions.InvalidQrCodeException;
+import com.blue.oyster.model.exceptions.NoFiltrationSet;
 import com.blue.oyster.repository.GuestRepository;
 import com.blue.oyster.repository.InviteRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,13 +63,26 @@ public class GuestsManagementService {
         return new GuestDTO(guest.getFirstName(), guest.getLastName());
     }
 
-    public List<GuestDTO> findGuests(UUID id) {
-        if (id == null) return findAllGuests();
-        else return List.of(GuestDTO.entitryToDto(findGuestById(id)));
+    @Transactional(readOnly = true)
+    public List<GuestDTO> findGuests(String firstName, String lastName) {
+        if (firstName == null && lastName==null) throw new NoFiltrationSet("Не задан параметр для поиска гостя (имя/фамилия)");
+
+        Specification<GuestEntity> spec = Specification.unrestricted();
+        if (firstName != null) {
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("firstName"), firstName));
+        }
+        if (lastName != null) {
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("lastName"), lastName));
+        }
+
+        return guestRepository.findAll(spec).stream()
+                .map(GuestDTO::entityToDto)
+                .toList();
     }
 
+
     private List<GuestDTO> findAllGuests() {
-        return guestRepository.findAll().stream().map(GuestDTO::entitryToDto).toList();
+        return guestRepository.findAll().stream().map(GuestDTO::entityToDto).toList();
     }
 
     private GuestEntity findGuestById(UUID id) {
@@ -98,16 +111,26 @@ public class GuestsManagementService {
         }
     }
 
-    public InviteEntity findInvitationById(UUID id) {
+    private InviteEntity findInvitationById(UUID id) {
         return inviteRepository.findById(id)
                 .orElseThrow(() -> new InvalidQrCodeException("invitation not found"));
     }
 
+    public InviteDTO getInvitationById(UUID id){
+        InviteEntity invitation = findInvitationById(id);
+        return new InviteDTO(invitation.getId(),
+                            invitation.getQr(),
+                            invitation.getGuest().getId(),
+                            invitation.getCreatedAt(),
+                            invitation.getUpdatedAt(),
+                            invitation.getUsedAt());
+    }
+
     @Transactional
-    public UUID inviteGuest(UUID guestId) {
+    public InvitationQrDTO inviteGuest(UUID guestId) {
         GuestEntity guest = findGuestById(guestId);
         InviteEntity invitation = createInvitationHelper(guest);
-        return invitation.getQr();
+        return new InvitationQrDTO(invitation.getQr());
     }
 
     //qr код нельзя вертать по тз, и в след раз гость его будет брать из базы

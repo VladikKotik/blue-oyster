@@ -17,6 +17,21 @@ public class InviteEntity {
     @Column(name = "qr", nullable = false)
     private UUID qr;
 
+    public UUID getId() {
+        return id;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Instant getUsedAt() {
+        return usedAt;
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_guest", nullable = false)
