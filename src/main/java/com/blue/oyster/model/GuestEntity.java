@@ -1,21 +1,64 @@
 package com.blue.oyster.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
-@Table(name = "guests")
+@Table(name = "guests", uniqueConstraints = @UniqueConstraint(
+        name = "uq_guest_name",
+        columnNames = {"first_name", "last_name"}
+))
 public class GuestEntity {
 
     @Id
-    @Column(name = "id")
-    long id;
+    @Column(name = "id", nullable = false)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @Column(name = "first_name")
-    String firstName;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
 
-    @Column(name = "last_name")
-    String lastName;
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @OneToMany(mappedBy = "guest", fetch = FetchType.LAZY)
+    private List<InviteEntity> invitations;
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }
