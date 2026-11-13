@@ -1,6 +1,7 @@
 package com.blue.oyster.controller;
 
-import com.blue.oyster.model.InviteEntity;
+import com.blue.oyster.model.InvitationQrDTO;
+import com.blue.oyster.model.InviteDTO;
 import com.blue.oyster.service.GuestsManagementService;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,10 +16,9 @@ public class ManageInvitationsController {
         this.guestsManagementService = guestsManagementService;
     }
 
-    //так не надо, но предположим, как будто эндпоинт защищен и нам нужна вся его служебная информация
     @GetMapping("invitation/{invitationId}")
-    public InviteEntity getInvitation(@PathVariable UUID invitationId) {
-        return guestsManagementService.findInvitationById(invitationId);
+    public InviteDTO getInvitation(@PathVariable UUID invitationId) {
+        return guestsManagementService.getInvitationById(invitationId);
     }
 
     @DeleteMapping("invitation/{invitationId}")
@@ -32,7 +32,7 @@ public class ManageInvitationsController {
     }
 
     @PostMapping("invitation/{guestId}")
-    public UUID inviteGuest(@PathVariable UUID guestId) {
+    public InvitationQrDTO inviteGuest(@PathVariable UUID guestId) {
         return guestsManagementService.inviteGuest(guestId);
     }
 }

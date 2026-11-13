@@ -3,6 +3,7 @@ package com.blue.oyster.controller;
 import com.blue.oyster.model.exceptions.ClearingHistoryException;
 import com.blue.oyster.model.exceptions.GuestNotFoundException;
 import com.blue.oyster.model.exceptions.InvalidQrCodeException;
+import com.blue.oyster.model.exceptions.NoFiltrationSet;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,6 +33,14 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(ClearingHistoryException.class)
     public ProblemDetail handleNotFound(ClearingHistoryException ex) {
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(NoFiltrationSet.class)
+    public ProblemDetail handleNoFiltrationSet(NoFiltrationSet ex) {
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
                 ex.getMessage()

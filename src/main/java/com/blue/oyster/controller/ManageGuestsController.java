@@ -20,8 +20,8 @@ public class ManageGuestsController {
     }
 
     @GetMapping("/guest")
-    public List<GuestDTO> findGuests(@RequestParam(required = false) UUID guestId) {
-        return guestsManagementService.findGuests(guestId);
+    public List<GuestDTO> findGuests(@RequestParam(required = false) String firstName, @RequestParam(required = false) String lastName) {
+        return guestsManagementService.findGuests(firstName, lastName);
     }
 
     @PostMapping("/guest")
