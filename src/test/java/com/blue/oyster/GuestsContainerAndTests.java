@@ -9,22 +9,29 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 //@SpringBootTest
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @Testcontainers
+@ActiveProfiles("test")
 class GuestsContainerAndTests {
 
     @Container
@@ -69,15 +76,16 @@ class GuestsContainerAndTests {
 
     @Test
     void getGuest() {
-        ResponseEntity<GuestDTO[]> response = testRestTemplate.getForEntity(
-                    "/guest?firstName=Улов",
-                    GuestDTO[].class);
-
+        ResponseEntity<List<GuestDTO>> response = testRestTemplate.exchange(
+                "/api/v1/guest?firstName=Улов",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<GuestDTO>>() {});
             assertEquals(HttpStatus.OK, response.getStatusCode());
 
-            GuestDTO[] guests = response.getBody();
+            List<GuestDTO> guests = response.getBody();
             assertNotNull(guests);
-            assertEquals(1, guests.length);
-            assertEquals("Кальмаров", guests[0].lastName());
+            assertEquals(1, guests.size());
+            assertEquals("Кальмаров", guests.get(0).lastName());
     }
 }

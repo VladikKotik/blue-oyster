@@ -21,6 +21,12 @@ databaseChangeLog:
               - column:
                   name: used_at
                   type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+              - column:
+                  name: updated_at
+                  type: timestamptz
         - addForeignKeyConstraint:
             baseTableName: invites_qr
             baseColumnNames: id_guest

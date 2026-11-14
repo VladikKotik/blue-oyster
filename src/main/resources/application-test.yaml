@@ -5,3 +5,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
+
+  logging:
+    level:
+      liquibase: DEBUG
+      org.springframework.boot.autoconfigure.liquibase: DEBUG
