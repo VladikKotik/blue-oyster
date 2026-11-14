@@ -1,0 +1,43 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-invites-qr
+      author: your-name
+      changes:
+        - createTable:
+            tableName: invites_qr
+            columns:
+              - column:
+                  name: qr
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_invites_qr
+                    nullable: false
+              - column:
+                  name: id_guest
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: used_at
+                  type: timestamptz
+        - addForeignKeyConstraint:
+            baseTableName: invites_qr
+            baseColumnNames: id_guest
+            referencedTableName: guests
+            referencedColumnNames: id
+            constraintName: fk_guests_qr_guest
+            onUpdate: CASCADE
+            onDelete: CASCADE
+  - changeSet:
+      id: 003-create-unique-active-invite-index
+      author: your-name
+      changes:
+        - createIndex:
+            tableName: invites_qr
+            indexName: uq_one_active_invite_per_guest
+            unique: true
+            columns:
+              - column:
+                  name: id_guest
+            where: used_at IS NULL
