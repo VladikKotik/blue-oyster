@@ -36,7 +36,7 @@ public class ManageGuestsController {
     }
 
     @DeleteMapping("/guest/{guestId}")
-    public void banGuest(@PathVariable UUID guestId) {
+    public void deleteGuest(@PathVariable UUID guestId) {
         guestsManagementService.deleteGuest(guestId);
     }
 }

@@ -61,4 +61,7 @@ public class GuestEntity {
         this.updatedAt = updatedAt;
     }
 
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }
