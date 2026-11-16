@@ -7,11 +7,16 @@ databaseChangeLog:
             tableName: invites_qr
             columns:
               - column:
-                  name: qr
+                  name: id
                   type: uuid
                   constraints:
                     primaryKey: true
                     primaryKeyName: pk_invites_qr
+                    nullable: false
+              - column:
+                  name: qr
+                  type: uuid
+                  constraints:
                     nullable: false
               - column:
                   name: id_guest

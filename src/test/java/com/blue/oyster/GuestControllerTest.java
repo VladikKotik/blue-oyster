@@ -1,54 +1,22 @@
 package com.blue.oyster;
 
 import com.blue.oyster.model.GuestDTO;
-import com.blue.oyster.repository.GuestRepository;
+import com.blue.oyster.model.GuestEntity;
+import com.blue.oyster.model.InviteEntity;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.TestRestTemplate;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.jdbc.Sql;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureTestRestTemplate
-@Testcontainers
-@Sql(scripts = "/test-data/add-guests.sql",
-        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-@Sql(scripts = "/test-data/clean-guests.sql",
-        executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-@ActiveProfiles("test")
-class GuestsContainerAndTests {
-
-    @Container
-    static PostgreSQLContainer postgres =
-            new PostgreSQLContainer("postgres:16");
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-    }
-
-    @Autowired
-    GuestRepository guestRepository;
-
-    @Autowired
-    TestRestTemplate testRestTemplate;
+public class GuestControllerTest extends BlueOysterTestContainer {
 
     @Test
     void getGuestByFirstName() {
@@ -108,6 +76,8 @@ class GuestsContainerAndTests {
                 new ParameterizedTypeReference<String>() {
                 });
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assert response.getBody() != null;
+        assertTrue(response.getBody().contains("Не задан параметр для поиска гостя"));
     }
 
     @Test
@@ -121,33 +91,56 @@ class GuestsContainerAndTests {
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
 
-        assertTrue(guestRepository.findByFirstNameAndLastName("Райан", "Гослинг").isPresent());
-
+        List<GuestEntity> guests = guestRepository.findAll();
+        assertNotNull(guests.stream()
+                .filter(g -> g.getFirstName().equals("Райан") && g.getLastName().equals("Гослинг"))
+                .findAny());
     }
 
     @Test
     void renameGuest() {
-        GuestDTO guest = new GuestDTO("Покупатель", "Эклипсов");
 
-        ResponseEntity<Void> response = testRestTemplate.postForEntity(
-                "/api/v1/guest/37c1f40d-801b-42e9-be7b-6013ddd5dae4",
-                guest,
+        UUID guestId = UUID.fromString("37c1f40d-801b-42e9-be7b-6013ddd5dae4");
+
+        GuestEntity guest = guestRepository.findById(guestId).orElseThrow();
+
+        Instant updatedAtOld = guest.getUpdatedAt();
+
+        ResponseEntity<Void> response = testRestTemplate.exchange(
+                "/api/v1/guest/" + guestId,
+                HttpMethod.PUT,
+                new HttpEntity<>(new GuestDTO("Покупатель", "Эклипсов")),
                 Void.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(guestRepository.findByFirstNameAndLastName("Покупатель", "Эклипсов").isPresent());
+
+        assertTrue(guestRepository.findById(guestId)
+                .isPresent()
+        );
+
+        assertTrue(guestRepository.findById(guestId).get().getUpdatedAt().isAfter(updatedAtOld));
     }
 
 
     @Test
     void deleteGuest() {
+
+        UUID guestId = UUID.fromString("37c1f40d-801b-42e9-be7b-6013ddd5dae4");
+
         ResponseEntity<Void> response = testRestTemplate.exchange(
-                "/api/v1/guest/37c1f40d-801b-42e9-be7b-6013ddd5dae4",
+                "/api/v1/guest/" + guestId,
                 HttpMethod.DELETE,
                 null,
                 Void.class);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertFalse(guestRepository.findByFirstNameAndLastName("Покупатель", "Черностоев").isPresent());
+
+        assertFalse(guestRepository.findById(guestId)
+                .isPresent()
+        );
+
+        List<InviteEntity> invitations = inviteRepository.findAll();
+        assertTrue(invitations.stream().filter(i -> i.getGuest().getId().equals(guestId)).findAny().isEmpty());
+
     }
 
 }
